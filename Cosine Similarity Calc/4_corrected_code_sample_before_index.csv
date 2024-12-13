@@ -1,0 +1,308 @@
+Language,Comment,SourceCode,Issue Type,Code Fix
+Java,fuzzy match ranking,"    public boolean fuzzyMatch(ValueNumber v1, ValueNumber v2) {
+        if (REDUNDANT_LOAD_ELIMINATION) {
+            return v1.equals(v2) || fromMatchingLoads(v1, v2) || haveMatchingFlags(v1, v2);
+        } else {
+            return v1.equals(v2);
+        }
+    }",Código em Conformidade,"public boolean fuzzyMatch(ValueNumber v1, ValueNumber v2) {
+    boolean isEqual = v1.equals(v2);
+    if (REDUNDANT_LOAD_ELIMINATION) {
+        boolean isFromMatchingLoads = fromMatchingLoads(v1, v2);
+        boolean hasMatchingFlags = haveMatchingFlags(v1, v2);
+        return isEqual || isFromMatchingLoads || hasMatchingFlags;
+    } else {
+        return isEqual;
+    }
+}"
+Java,create cookie,"  private Cookie createCookie(String str) throws UnsupportedEncodingException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(""Cookie name = "" + AUTH_COOKIE + "" value = "" + str);
+    }
+    Cookie cookie = new Cookie(AUTH_COOKIE, str);
+
+    cookie.setMaxAge(cookieMaxAge);
+    if (cookieDomain != null) {
+      cookie.setDomain(cookieDomain);
+    }
+    if (cookiePath != null) {
+      cookie.setPath(cookiePath);
+    }
+    cookie.setSecure(isCookieSecure);
+    return cookie;
+  }",Código em Conformidade,"```java
+private Cookie createCookie(String str) throws UnsupportedEncodingException {
+  if (str == null || str.isEmpty()) {
+    throw new IllegalArgumentException(""Cookie value can't be null or empty"");
+  }
+  if (AUTH_COOKIE == null || AUTH_COOKIE.isEmpty()) {
+    throw new IllegalArgumentException(""Cookie name can't be null or empty"");
+  }
+  if (LOG.isDebugEnabled()) {
+    LOG.debug(""Cookie name = "" + AUTH_COOKIE + "" value = "" + str);
+  }
+  Cookie cookie = new Cookie(AUTH_COOKIE, str);
+
+  cookie.setMaxAge(cookieMaxAge);
+  if (cookieDomain != null) {
+    cookie.setDomain(cookieDomain);
+  }
+  if (cookiePath != null) {
+    cookie.setPath(cookiePath);
+  }
+  cookie.setSecure(isCookieSecure);
+  return cookie;
+}
+```"
+Java,parse query string in url,"	protected String parseUrl(String url, List<Param> paramList) throws UnsupportedEncodingException {
+		StringBuilder sb = new StringBuilder();
+		for (Param param : paramList) {
+			if (param.getValue() == null) {
+				continue;
+			}
+			if (sb.length() > 0) {
+				sb.append('&');
+			}
+
+			sb.append(param.getName()).append('=').append(URLEncoder.encode(param.getValue().toString(), ""UTF-8""));
+		}
+		String queryString = sb.toString();
+		// System.err.println(""queryString:"" + queryString);
+		if (url.indexOf(""?"") == -1) {
+			return url + ""?"" + queryString;
+		}
+		else {
+			return url + ""&"" + queryString;
+		}
+	}",Código em Conformidade,"```java
+protected String parseUrl(String url, List<Param> paramList) throws UnsupportedEncodingException {
+    StringBuilder sb = new StringBuilder();
+    for (Param param : paramList) {
+        if (param.getValue() == null) {
+            continue;
+        }
+        if (sb.length() > 0) {
+            sb.append('&');
+        }
+
+        sb.append(param.getName()).append('=').append(URLEncoder.encode(param.getValue().toString(), ""UTF-8""));
+    }
+    String queryString = sb.toString();
+
+    if (!url.contains(""?"")) {
+        return url + ""?"" + queryString;
+    } else {
+        return url + ""&"" + queryString;
+    }
+}
+```"
+Java,convert int to string,"    public int getFrequency(String from, String to)
+    {
+        return getFrequency(convert(from), convert(to));
+    }",Código em Conformidade,"```java
+public String getFrequency(String from, String to)
+{
+    int freq = getFrequency(convert(from), convert(to));
+    return Integer.toString(freq);
+}
+```"
+Java,deducting the median from each column,"    private List<RowProcessingConsumer> extractConsumers(AnalysisJob analysisJob,
+            AnalyzerBeansConfiguration analyzerBeansConfiguration, Configuration configuration) {
+        final InjectionManager injectionManager = analyzerBeansConfiguration.getInjectionManager(analysisJob);
+        final ReferenceDataActivationManager referenceDataActivationManager = new ReferenceDataActivationManager();
+
+        final LifeCycleHelper lifeCycleHelper = new LifeCycleHelper(injectionManager, referenceDataActivationManager,
+                configuration.includeNonDistributedTasks);
+        SourceColumnFinder sourceColumnFinder = new SourceColumnFinder();
+        sourceColumnFinder.addSources(analysisJob);
+
+        /**
+         * Use a single threaded task runner since this handler is invoked in a
+         * blocking way - the calling code may itself be multithreaded without
+         * issues.
+         */
+        final SingleThreadedTaskRunner taskRunner = new SingleThreadedTaskRunner();
+
+        final AnalysisListener analysisListener = configuration.analysisListener;
+        final RowProcessingPublishers rowProcessingPublishers = new RowProcessingPublishers(analysisJob,
+                analysisListener, taskRunner, lifeCycleHelper, sourceColumnFinder);
+
+        final RowProcessingPublisher publisher;
+        if (configuration.table != null) {
+            publisher = rowProcessingPublishers.getRowProcessingPublisher(configuration.table);
+            if (publisher == null) {
+                throw new IllegalArgumentException(""Job does not consume records from table: "" + configuration.table);
+            }
+        } else {
+            final Collection<RowProcessingPublisher> publisherCollection = rowProcessingPublishers
+                    .getRowProcessingPublishers();
+            if (publisherCollection.size() > 1) {
+                throw new IllegalArgumentException(
+                        ""Job consumes multiple tables, but ConsumeRowHandler can only handle a single table's components. Please specify a Table constructor argument."");
+            }
+            publisher = publisherCollection.iterator().next();
+        }
+
+        final AtomicReference<Throwable> errorReference = new AtomicReference<Throwable>();
+
+        publisher.initializeConsumers(new TaskListener() {
+            @Override
+            public void onError(Task task, Throwable throwable) {
+                logger.error(""Exception thrown while initializing consumers."", throwable);
+                errorReference.compareAndSet(null, throwable);
+            }
+
+            @Override
+            public void onComplete(Task task) {
+                logger.info(""Consumers initialized successfully."");
+            }
+
+            @Override
+            public void onBegin(Task task) {
+                logger.info(""Beginning the process of initializing consumers."");
+            }
+        });
+
+        final Throwable throwable = errorReference.get();
+        if (throwable != null) {
+            if (throwable instanceof RuntimeException) {
+
+            }
+        }
+
+        List<RowProcessingConsumer> consumers = publisher.getConfigurableConsumers();
+        if (!configuration.includeAnalyzers) {
+            consumers = removeAnalyzers(consumers);
+        }
+
+        consumers = RowProcessingPublisher.sortConsumers(consumers);
+        return consumers;
+    }",Código em Conformidade,"```java
+final Throwable throwable = errorReference.get();
+if (throwable != null) {
+    if (throwable instanceof RuntimeException) {
+        throw (RuntimeException) throwable;
+    } else {
+        throw new RuntimeException(throwable);
+    }
+}
+```"
+Java,read properties file,"    public static Properties readPropertiesFromFile(String _fileName, Properties _props) {
+        Properties props = _props == null ? new Properties() : _props;
+
+        LOGGER.debug(""Trying to read properties from file: "" + _fileName);
+        Properties newProperties = readProperties(new File(_fileName));
+        if (newProperties != null) {
+            LOGGER.debug(""Successfully read properties from file: "" + _fileName);
+            props.putAll(newProperties);
+        }
+
+        return props;
+    }",Bug Crítico,"```java
+import java.util.*;
+import java.io.*;
+import org.apache.log4j.Logger;
+
+public class Main {
+    
+    private static final Logger LOGGER = Logger.getLogger(Main.class);
+
+    public static Properties readPropertiesFromFile(String _fileName, Properties _props) {
+        Properties props = _props == null ? new Properties() : _props;
+
+        LOGGER.debug(""Trying to read properties from file: "" + _fileName);
+        Properties newProperties = readProperties(new File(_fileName));
+        if (newProperties != null) {
+            LOGGER.debug(""Successfully read properties from file: "" + _fileName);
+            props.putAll(newProperties);
+        }
+
+        return props;
+    }
+    
+    public static Properties readProperties(File file) {
+        Properties props = new Properties();
+        InputStream input = null;
+        try {
+            input = new FileInputStream(file);
+            props.load(input);
+        } catch (IOException ex) {
+            LOGGER.error(""Error reading properties file"", ex);
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (IOException e) {
+                    LOGGER.error(""Error closing properties file"", e);
+                }
+            }
+        }
+        return props;
+    }
+}
+```"
+Java,get executable path,"    public static Builder running(File executable) {
+        checkArgument(executable.isFile(), ""file not found: %s"", executable);
+        checkArgument(executable.canExecute(), ""executable.canExecute"");
+        return running(executable.getPath());
+    }",Vulnerabilidade (Injeção de Comandos - OWASP),"```java
+public static Builder running(File executable) {
+    try {
+        if (executable == null) {
+            throw new IllegalArgumentException(""Executable file must not be null"");
+        }
+        if (!executable.exists() || !executable.isFile()) {
+            throw new IllegalArgumentException(String.format(""File not found: %s"", executable));
+        }
+        if (!executable.canExecute()) {
+            throw new IllegalArgumentException(String.format(""Cannot execute file: %s"", executable));
+        }
+        
+        return running(executable.getPath());
+    } catch (Exception e) {
+        System.err.println(""Error: "" + e.getMessage());
+        return null;
+    }
+}
+```"
+Java,set file attrib hidden,"  @Implementation
+  protected void setScale(float sx, float sy) {
+    setOps.put(SCALE, sx + "" "" + sy);
+    simpleMatrix = SimpleMatrix.scale(sx, sy);
+  }",Código em Conformidade,"```java
+public void setFileHidden(String filePath) {
+    try {
+        File file = new File(filePath);
+
+        if(!file.exists()) {
+            System.out.println(""File does not exist"");
+            return;
+        }
+
+        Path path = FileSystems.getDefault().getPath(filePath);
+        Files.setAttribute(path, ""dos:hidden"", true, LinkOption.NOFOLLOW_LINKS);
+    } catch (IOException ex) {
+        System.out.println(""Error setting file to hidden: "" + ex.getMessage());
+    }
+}
+```"
+Java,how to randomly pick a number,"	private int generateRandomId() {
+		int num = (int) (Math.random() * Integer.MAX_VALUE);
+		while (RESULT_HOLDER.containsKey(num)) {
+			num = (int) (Math.random() * Integer.MAX_VALUE);
+		}
+		return num;
+	}",Código em Conformidade,"```java
+private int generateRandomId() {
+	int num = (int) (Math.random() * Integer.MAX_VALUE);
+	int attempts = 0;
+	while (RESULT_HOLDER.containsKey(num) && attempts < 1000) {
+		num = (int) (Math.random() * Integer.MAX_VALUE);
+		attempts++;
+	}
+	if (attempts == 1000) {
+		throw new RuntimeException(""Failed to generate unique ID after "" + attempts + "" attempts."");
+	}
+	return num;
+}
+```"
